@@ -10,6 +10,7 @@ import requests
 from streamlit_extras.stylable_container import stylable_container
 import os
 import sys
+from gnews import GNews
 sys.path.append('/')
 
 #fetch API key from environment variable
@@ -91,6 +92,19 @@ def get_symbol_data(symbol):
     # convert to string for OPENAI Assistant API
     stock_data_str = json.dumps(stock_data)
     return stock_data_str
+
+def get_news(ticker):
+
+    google_news = GNews(language="en", period="90d")
+    stock_news = google_news.get_news(f"{ticker}+' stock news'")
+    filtered_news = []
+
+    publishers = ["Yahoo Finance", "Bloomberg", "The Motley Fool"] #You can select your publishers
+    for news in stock_news[:10]:
+        if news["publisher"]["title"] in publishers:
+            filtered_news.append(news)
+    filtered_news = json.dumps(filtered_news)
+    return filtered_news
 
 def get_valuation(symbol, api_key):
     """Fetches valuation metrics (e.g., DCF)."""
