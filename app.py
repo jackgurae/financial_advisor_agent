@@ -2,17 +2,12 @@
 from openai._client import OpenAI
 import streamlit as st
 import requests
-import numpy_financial as npf
 import time
-import numpy as np
 import json
 import requests
-from streamlit_extras.stylable_container import stylable_container
 import os
 import sys
 from gnews import GNews
-import yfinance as yf
-import matplotlib.pyplot as plt
 sys.path.append('/')
 
 #fetch API key from environment variable
