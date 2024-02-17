@@ -192,7 +192,6 @@ if st.session_state.start_chat:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    
     # Chat input for the user
     prompt = st.chat_input("e.g. AAPL or Microsoft", key="chat_input")
     if prompt or st.session_state.trigger_assistant:
@@ -277,7 +276,6 @@ if st.session_state.start_chat:
                 st.session_state.msgs.append({"role": "assistant", "content": full_response})
                 with st.chat_message("assistant"):
                     st.markdown(full_response, unsafe_allow_html=True)
-        
 else:
     # write warning
     st.warning("Please enter your OpenAI API key to start the chat")
