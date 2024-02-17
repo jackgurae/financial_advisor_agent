@@ -136,8 +136,33 @@ def plot_chart(ticker):
     plt.grid(True)
 
     return plt
-    
 
+# stock pricing using pe ratio
+def stock_pricing_pe(eps, industry, pe_ratio=None):
+    """Calculates the stock price using the price-to-earnings (PE) ratio."""
+    # pares eps to float
+    eps = float(eps)
+    if pe_ratio == None:
+        # Get the average PE ratio for the industry
+        pe_by_industry = {
+            'technology': 30,
+            'finance': 15,
+            'healthcare': 25,
+            'energy': 20,
+            'consumer': 20,
+            'industrial': 20,
+            'utilities': 15,
+            'materials': 20,
+            'realestate': 20,
+            'telecom': 15
+        }
+        pe_ratio = pe_by_industry.get(industry, 10)  # Default to 20 if industry not found
+    else:
+        pe_ratio = float(pe_ratio)
+
+        
+    return {"target_price": eps * pe_ratio, "industry": industry, "pe_ratio": pe_ratio}
+    
 # Define the function to process messages with citations
 def process_message_with_citations(message):
     """Extract content and annotations from the message and format citations as footnotes."""
