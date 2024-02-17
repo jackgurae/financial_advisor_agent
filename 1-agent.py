@@ -11,6 +11,8 @@ from streamlit_extras.stylable_container import stylable_container
 import os
 import sys
 from gnews import GNews
+import yfinance as yf
+import matplotlib.pyplot as plt
 sys.path.append('/')
 
 #fetch API key from environment variable
@@ -117,10 +119,33 @@ def get_valuation(symbol, api_key):
             return data
     return {}  # Return empty in case of errors or no data
 
+# use yahoo finance to get stock price
+def plot_chart(ticker):
+    """Plots a chart of the stock's historical prices."""
+    # Fetch the historical prices
+    stock = yf.Ticker(ticker)
+    history = stock.history(period="1y")
+
+    # Plot the historical prices
+    plt.figure(figsize=(12, 6))
+    plt.plot(history.index, history['Close'], label=f'{ticker} stock price', color='blue')
+    plt.title(f'{ticker} stock price')
+    plt.xlabel('Date')
+    plt.ylabel('Price')
+    plt.legend()
+    plt.grid(True)
+
+    return plt
+    
+
 # Define the function to process messages with citations
 def process_message_with_citations(message):
     """Extract content and annotations from the message and format citations as footnotes."""
-    message_content = message.content[0].text
+    #  handle MessageContentImageFile
+    if message.content[0].type == "image":
+        return f"![{message.content[0].filename}]({message.content[0].url})"
+    else:
+        message_content = message.content[0].text
     annotations = message_content.annotations if hasattr(message_content, 'annotations') else []
     citations = []
 
