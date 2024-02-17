@@ -19,36 +19,39 @@ sys.path.append('/')
 api_key = os.getenv("OPENAI_API_KEY")
 fmp_api_key = os.getenv("FMP_API_KEY")
 assistant_id = 'asst_uoTf4l8h8zbe6kd6PqzoU6Qf' # financial advisor agent
-
+st.session_state.start_chat = False
 # Initialize session state variables
 if "file_id_list" not in st.session_state:
     st.session_state.file_id_list = []
-
-if "start_chat" not in st.session_state:
-    st.session_state.start_chat = True
-    st.session_state.msgs = []
-
-# api_key = st.sidebar.text_input("Enter your OpenAI API key", type="password")
-if api_key:
-    OpenAI.api_key = api_key
-    client = OpenAI(api_key=api_key)
-    st.session_state.start_chat = True
-
-if "thread_id" not in st.session_state:
-    assistant = client.beta.assistants.retrieve(assistant_id)
-    st.session_state.assistant_instructions = assistant.instructions
-    thread = client.beta.threads.create()
-    st.session_state.thread_id = thread.id
-    print(f'Thread ID: {thread.id}')
-
-if "trigger_assistant" not in st.session_state:
-    st.session_state.trigger_assistant = False
 
 # Set up the Streamlit page with a title and icon
 st.set_page_config(page_title="Financial Advisor App", page_icon=":speech_balloon:")
 
 # Create a sidebar for API key configuration and additional features
 st.sidebar.header("Configuration")
+# input box for openai api key
+api_key = st.sidebar.text_input("Enter your OpenAI API key", type="password")
+fmp_api_key = st.sidebar.text_input("Enter your Financial Modeling Prep API key", type="password")
+st.sidebar.markdown(
+    """
+    You can get an API key from [OpenAI](https://platform.openai.com/signup) and [Financial Modeling Prep](https://financialmodelingprep.com/developer/docs/)
+    """
+)
+if api_key and fmp_api_key:
+    OpenAI.api_key = api_key
+    client = OpenAI(api_key=api_key)
+    st.session_state.start_chat = True
+    st.session_state.msgs = []
+
+    if "thread_id" not in st.session_state:
+        assistant = client.beta.assistants.retrieve(assistant_id)
+        st.session_state.assistant_instructions = assistant.instructions
+        thread = client.beta.threads.create()
+        st.session_state.thread_id = thread.id
+        print(f'Thread ID: {thread.id}')
+
+if "trigger_assistant" not in st.session_state:
+    st.session_state.trigger_assistant = False
 
 import requests
 import json
@@ -64,7 +67,6 @@ def get_symbol_data(symbol):
     Returns:
         dict: A dictionary containing the combined stock data
     """
-
     base_url = 'https://financialmodelingprep.com/api/v3'
 
     endpoints = {
@@ -119,24 +121,6 @@ def get_valuation(symbol, api_key):
             return data
     return {}  # Return empty in case of errors or no data
 
-# use yahoo finance to get stock price
-def plot_chart(ticker):
-    """Plots a chart of the stock's historical prices."""
-    # Fetch the historical prices
-    stock = yf.Ticker(ticker)
-    history = stock.history(period="1y")
-
-    # Plot the historical prices
-    plt.figure(figsize=(12, 6))
-    plt.plot(history.index, history['Close'], label=f'{ticker} stock price', color='blue')
-    plt.title(f'{ticker} stock price')
-    plt.xlabel('Date')
-    plt.ylabel('Price')
-    plt.legend()
-    plt.grid(True)
-
-    return plt
-
 # stock pricing using pe ratio
 def stock_pricing_pe(eps, industry, pe_ratio=None):
     """Calculates the stock price using the price-to-earnings (PE) ratio."""
@@ -160,7 +144,6 @@ def stock_pricing_pe(eps, industry, pe_ratio=None):
     else:
         pe_ratio = float(pe_ratio)
 
-        
     return {"target_price": eps * pe_ratio, "industry": industry, "pe_ratio": pe_ratio}
     
 # Define the function to process messages with citations
@@ -304,5 +287,5 @@ if st.session_state.start_chat:
                     st.markdown(full_response, unsafe_allow_html=True)
         
 else:
-    # Prompt to start the chat
-    st.write("Please upload files and click 'Start Chat' to begin the conversation.")
+    # write warning
+    st.warning("Please enter your OpenAI API key to start the chat")

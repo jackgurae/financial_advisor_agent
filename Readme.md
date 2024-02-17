@@ -12,9 +12,6 @@ Function calling allow user to use natural language to call task/function correc
 ## OpenAI Assistant API
 
 OpenAI Assistant API is a powerful tool that can help you to build a conversational AI.
-
-<!-- insert image url-->
-
 ![OpenAI Assistant API](https://cdn.openai.com/API/docs/images/diagram-assistant.webp)
 Source: [OPENAI - How Assistants work](https://platform.openai.com/docs/assistants/how-it-works/objects)
 
@@ -72,9 +69,8 @@ gnews API provides the news data. [Docs](https://gnews.io/docs/v4)
 3. login and create New App
 4. connect to github
 5. select the repository
-6. make sure you specify the right file to run the app
-7. for API keys, you can use the environment variables
-8. deploy the app
+6. make sure you specify the right file to run the app e.g. `app.py`
+7. deploy the app
 
 **Appendix**:
 
