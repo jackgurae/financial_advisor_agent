@@ -10,9 +10,6 @@ import sys
 from gnews import GNews
 sys.path.append('/')
 
-#fetch API key from environment variable
-api_key = os.getenv("OPENAI_API_KEY")
-fmp_api_key = os.getenv("FMP_API_KEY")
 assistant_id = 'asst_uoTf4l8h8zbe6kd6PqzoU6Qf' # financial advisor agent
 st.session_state.start_chat = False
 # Initialize session state variables
