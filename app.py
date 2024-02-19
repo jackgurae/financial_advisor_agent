@@ -10,6 +10,8 @@ import sys
 from gnews import GNews
 sys.path.append('/')
 
+api_key = os.getenv("OPENAI_API_KEY")
+fmp_api_key = os.getenv("FMP_API_KEY")
 assistant_id = 'asst_uoTf4l8h8zbe6kd6PqzoU6Qf' # financial advisor agent
 st.session_state.start_chat = False
 # Initialize session state variables
@@ -22,13 +24,13 @@ st.set_page_config(page_title="Financial Advisor App", page_icon=":speech_balloo
 # Create a sidebar for API key configuration and additional features
 st.sidebar.header("Configuration")
 # input box for openai api key
-api_key = st.sidebar.text_input("Enter your OpenAI API key", type="password")
-fmp_api_key = st.sidebar.text_input("Enter your Financial Modeling Prep API key", type="password")
-st.sidebar.markdown(
-    """
-    You can get an API key from [OpenAI](https://platform.openai.com/signup) and [Financial Modeling Prep](https://financialmodelingprep.com/developer/docs/)
-    """
-)
+# api_key = st.sidebar.text_input("Enter your OpenAI API key", type="password")
+# fmp_api_key = st.sidebar.text_input("Enter your Financial Modeling Prep API key", type="password")
+# st.sidebar.markdown(
+#     """
+#     You can get an API key from [OpenAI](https://platform.openai.com/signup) and [Financial Modeling Prep](https://financialmodelingprep.com/developer/docs/)
+#     """
+# )
 if api_key and fmp_api_key:
     OpenAI.api_key = api_key
     client = OpenAI(api_key=api_key)
@@ -54,7 +56,6 @@ def get_symbol_data(symbol):
 
     Args:
         symbol (str): The stock symbol (e.g., 'AAPL')
-        api_key (str): Your Financial Modeling Prep API key
 
     Returns:
         dict: A dictionary containing the combined stock data
