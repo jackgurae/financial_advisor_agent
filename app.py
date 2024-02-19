@@ -9,10 +9,13 @@ import os
 import sys
 from gnews import GNews
 sys.path.append('/')
-
+# use dotenv to load environment variables
+from dotenv import load_dotenv
+load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
+print(f"API Key: {api_key}")
 fmp_api_key = os.getenv("FMP_API_KEY")
-assistant_id = 'asst_uoTf4l8h8zbe6kd6PqzoU6Qf' # financial advisor agent
+assistant_id = 'asst_tdIeETK5KJSWXAUvYRQ8wW37' # financial advisor agent
 st.session_state.start_chat = False
 # Initialize session state variables
 if "file_id_list" not in st.session_state:
@@ -31,6 +34,8 @@ st.sidebar.header("Configuration")
 #     You can get an API key from [OpenAI](https://platform.openai.com/signup) and [Financial Modeling Prep](https://financialmodelingprep.com/developer/docs/)
 #     """
 # )
+# show image
+st.sidebar.image("QR_phatra.jpg", use_column_width=True)
 if api_key and fmp_api_key:
     OpenAI.api_key = api_key
     client = OpenAI(api_key=api_key)
