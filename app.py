@@ -13,7 +13,6 @@ sys.path.append('/')
 from dotenv import load_dotenv
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
-print(f"API Key: {api_key}")
 fmp_api_key = os.getenv("FMP_API_KEY")
 assistant_id = 'asst_uoTf4l8h8zbe6kd6PqzoU6Qf' # financial advisor agent
 st.session_state.start_chat = False
