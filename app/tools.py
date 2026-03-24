@@ -7,7 +7,6 @@ import requests
 from gnews import GNews
 from langchain_core.tools import StructuredTool
 
-
 logger = logging.getLogger(__name__)
 FMP_STABLE_BASE_URL = "https://financialmodelingprep.com/stable"
 
