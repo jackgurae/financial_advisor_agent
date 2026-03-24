@@ -13,6 +13,11 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 
+def _render_chat_markdown(content: str) -> None:
+    with st.container():
+        st.markdown(content)
+
+
 def _configure_logging() -> None:
     log_level = os.getenv("APP_LOG_LEVEL", "INFO").upper()
     root_logger = logging.getLogger()
@@ -40,6 +45,11 @@ def main() -> None:
         st.session_state.authenticated = False
 
     st.sidebar.header("Configuration")
+    st.sidebar.page_link(
+        "pages/01_About_This_Agent.py",
+        label="About this agent",
+        icon="ℹ️",
+    )
 
     api_key = os.getenv("OPENAI_API_KEY")
     fmp_api_key = os.getenv("FMP_API_KEY")
@@ -67,10 +77,14 @@ def main() -> None:
         Hi, I'm Stock Financial Advisor. Provide me with the name or symbol of a stock and I will provide you with a detailed analysis of the stock.
         """
         )
+        st.info(
+            "Responses are formatted as structured markdown sections for easier reading. "
+            "Open 'About this agent' in the sidebar to inspect the current prompt and tool setup."
+        )
 
     for message in st.session_state.msgs:
         with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+            _render_chat_markdown(message["content"])
 
     if not api_key or not fmp_api_key:
         st.warning(
@@ -85,7 +99,7 @@ def main() -> None:
     logger.info("Received user prompt", extra={"prompt_preview": prompt[:120]})
 
     with st.chat_message("user"):
-        st.markdown(prompt)
+        _render_chat_markdown(prompt)
     history = st.session_state.msgs.copy()
     st.session_state.msgs.append({"role": "user", "content": prompt})
 
@@ -103,7 +117,7 @@ def main() -> None:
 
     st.session_state.msgs.append({"role": "assistant", "content": response})
     with st.chat_message("assistant"):
-        st.markdown(response)
+        _render_chat_markdown(response)
 
 
 if __name__ == "__main__":
