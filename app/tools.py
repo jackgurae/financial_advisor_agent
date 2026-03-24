@@ -151,13 +151,43 @@ def _raise_for_fmp_response(response: requests.Response, endpoint_name: str) -> 
     )
 
 
+def _is_empty_record(data: Any) -> bool:
+    if data is None:
+        return True
+    if isinstance(data, (list, dict, str, tuple, set)):
+        return len(data) == 0
+    return False
+
+
+def _error_payload(status: str, message: str, **extra: Any) -> dict[str, Any]:
+    return {
+        "status": status,
+        "message": message,
+        **extra,
+    }
+
+
 def get_valuation(symbol: str) -> str:
-    data = _call_fmp_with_fallback(
-        "dcf_valuation",
-        "dcf-advanced",
-        fallback_path="discounted-cash-flow",
-        symbol=symbol,
-    )
+    try:
+        data = _call_fmp_with_fallback(
+            "dcf_valuation",
+            "dcf-advanced",
+            fallback_path="discounted-cash-flow",
+            symbol=symbol,
+        )
+    except FMPAPIError as exc:
+        logger.warning(
+            "FMP valuation lookup failed",
+            extra={"symbol": symbol, "error": str(exc)},
+        )
+        return _safe_json(
+            _error_payload(
+                "unavailable",
+                "FMP valuation data is currently unavailable for this ticker.",
+                symbol=symbol,
+                error=str(exc),
+            )
+        )
     if not data:
         logger.warning(
             "FMP valuation endpoint returned empty data", extra={"symbol": symbol}
@@ -174,17 +204,37 @@ def get_symbol_data(symbol: str) -> str:
         "analyst_ratings": "grades",
     }
     stock_data: dict[str, Any] = {}
+    endpoint_errors: dict[str, str] = {}
 
     for endpoint_name, endpoint_path in endpoints.items():
-        if endpoint_name == "profile":
-            data = _call_fmp_with_fallback(
-                endpoint_name,
-                "profile-symbol",
-                fallback_path=endpoint_path,
-                symbol=symbol,
+        try:
+            if endpoint_name == "profile":
+                data = _call_fmp_with_fallback(
+                    endpoint_name,
+                    "profile-symbol",
+                    fallback_path=endpoint_path,
+                    symbol=symbol,
+                )
+            else:
+                data = _call_fmp(endpoint_name, endpoint_path, symbol=symbol)
+        except FMPAPIError as exc:
+            logger.warning(
+                "FMP symbol endpoint failed",
+                extra={
+                    "symbol": symbol,
+                    "endpoint_name": endpoint_name,
+                    "error": str(exc),
+                },
             )
-        else:
-            data = _call_fmp(endpoint_name, endpoint_path, symbol=symbol)
+            endpoint_errors[endpoint_name] = str(exc)
+            stock_data[endpoint_name] = _error_payload(
+                "unavailable",
+                f"FMP {endpoint_name.replace('_', ' ')} data is unavailable.",
+                symbol=symbol,
+                endpoint=endpoint_name,
+                error=str(exc),
+            )
+            continue
         if data:
             stock_data[endpoint_name] = _extract_first_record(data)
         else:
@@ -196,7 +246,114 @@ def get_symbol_data(symbol: str) -> str:
 
     valuation = json.loads(get_valuation(symbol))
     stock_data["valuation"] = valuation
+
+    non_error_records = [
+        value
+        for value in stock_data.values()
+        if not (isinstance(value, dict) and value.get("status") == "unavailable")
+    ]
+
+    if non_error_records and all(
+        _is_empty_record(value) for value in non_error_records
+    ):
+        logger.warning(
+            "FMP returned no symbol data across all endpoints",
+            extra={"symbol": symbol},
+        )
+        return _safe_json(
+            {
+                "symbol": symbol,
+                "status": "not_found",
+                "message": (
+                    "FMP returned no symbol data for this ticker. "
+                    "Use search_company_ticker to look up the correct ticker by company name."
+                ),
+                "search_suggestion": symbol,
+            }
+        )
+
+    if not non_error_records:
+        logger.warning(
+            "FMP symbol lookup unavailable across all endpoints",
+            extra={"symbol": symbol, "endpoint_errors": endpoint_errors},
+        )
+        return _safe_json(
+            {
+                "symbol": symbol,
+                "status": "lookup_unavailable",
+                "message": (
+                    "FMP symbol lookup is currently unavailable for this ticker. "
+                    "Try search_company_ticker to confirm the company symbol."
+                ),
+                "errors": endpoint_errors,
+                "search_suggestion": symbol,
+            }
+        )
+
     return _safe_json(stock_data)
+
+
+def search_company_ticker(query: str, limit: int = 10) -> str:
+    normalized_query = query.strip()
+    normalized_limit = max(1, min(limit, 20))
+
+    if not normalized_query:
+        return _safe_json(
+            {
+                "query": query,
+                "status": "invalid_request",
+                "message": "A company name or ticker search query is required.",
+                "results": [],
+            }
+        )
+
+    try:
+        data = _call_fmp(
+            "search_company_ticker",
+            "search-name",
+            query=normalized_query,
+            limit=normalized_limit,
+        )
+    except FMPAPIError as exc:
+        logger.warning(
+            "FMP company ticker search failed",
+            extra={
+                "query": normalized_query,
+                "limit": normalized_limit,
+                "error": str(exc),
+            },
+        )
+        return _safe_json(
+            {
+                "query": normalized_query,
+                "status": "unavailable",
+                "message": "FMP company ticker search is currently unavailable.",
+                "results": [],
+                "error": str(exc),
+            }
+        )
+
+    if not data:
+        logger.warning(
+            "FMP company ticker search returned empty data",
+            extra={"query": normalized_query, "limit": normalized_limit},
+        )
+        return _safe_json(
+            {
+                "query": normalized_query,
+                "status": "not_found",
+                "message": "FMP could not find matching company ticker data.",
+                "results": [],
+            }
+        )
+
+    return _safe_json(
+        {
+            "query": normalized_query,
+            "status": "ok",
+            "results": data,
+        }
+    )
 
 
 def get_news(ticker: str) -> str:
@@ -243,6 +400,11 @@ def stock_pricing_pe(eps: float, industry: str, pe_ratio: float | None = None) -
 
 def get_tools() -> list[StructuredTool]:
     return [
+        StructuredTool.from_function(
+            func=search_company_ticker,
+            name="search_company_ticker",
+            description="Search Financial Modeling Prep for matching companies and tickers by company name or partial ticker. Use this when a ticker is unknown or symbol data is not found.",
+        ),
         StructuredTool.from_function(
             func=get_symbol_data,
             name="get_symbol_data",

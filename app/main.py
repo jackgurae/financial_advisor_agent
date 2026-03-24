@@ -63,23 +63,24 @@ def main() -> None:
 
     api_key = os.getenv("OPENAI_API_KEY")
     fmp_api_key = os.getenv("FMP_API_KEY")
-    app_password = os.getenv("APP_PASSWORD")
+    app_password = os.getenv("APP_PASSWORD", "").strip()
 
     st.title("Stock Expert")
     st.write("Ask questions about stock valuation, financials, and more!")
 
-    if app_password:
-        if not st.session_state.authenticated:
-            password_input = st.text_input(
-                "Enter application password", type="password"
-            )
-            if st.button("Unlock"):
-                if password_input == app_password:
-                    st.session_state.authenticated = True
-                    st.rerun()
-                else:
-                    st.error("Invalid password")
-            return
+    if not app_password:
+        st.error("APP_PASSWORD must be set in your .env or deployment secrets.")
+        return
+
+    if not st.session_state.authenticated:
+        password_input = st.text_input("Enter application password", type="password")
+        if st.button("Unlock"):
+            if password_input == app_password:
+                st.session_state.authenticated = True
+                st.rerun()
+            else:
+                st.error("Invalid password")
+        return
 
     if not st.session_state.msgs:
         st.markdown(

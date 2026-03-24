@@ -83,6 +83,39 @@ def _message_to_text(content: Any) -> str:
     return str(content)
 
 
+def _log_agent_chunk(chunk: Any, metadata: dict[str, Any]) -> None:
+    node_name = metadata.get("langgraph_node", "unknown")
+    logger.debug(
+        "Agent stream chunk received",
+        extra={
+            "langgraph_node": node_name,
+            "metadata_keys": sorted(metadata.keys()),
+            "chunk_type": type(chunk).__name__,
+        },
+    )
+
+    tool_calls = getattr(chunk, "tool_calls", None)
+    if tool_calls:
+        logger.info(
+            "Agent requested tool calls",
+            extra={
+                "langgraph_node": node_name,
+                "tool_calls": tool_calls,
+            },
+        )
+
+    content = getattr(chunk, "content", None)
+    text = _message_to_text(content).strip() if content is not None else ""
+    if text:
+        logger.debug(
+            "Agent text chunk",
+            extra={
+                "langgraph_node": node_name,
+                "text_preview": text[:300],
+            },
+        )
+
+
 def _build_messages(
     user_input: str, history: list[dict[str, str]]
 ) -> list[HumanMessage | AIMessage]:
@@ -113,6 +146,14 @@ def stream_agent(user_input: str, history: list[dict[str, str]]) -> Iterator[str
         {"messages": messages},
         stream_mode="messages",
     ):
+        _log_agent_chunk(chunk, metadata)
+        if metadata.get("langgraph_node") == "tools":
+            text = _message_to_text(getattr(chunk, "content", "")).strip()
+            if text:
+                logger.info(
+                    "Tool node response received",
+                    extra={"text_preview": text[:500]},
+                )
         if metadata.get("langgraph_node") != "agent":
             continue
         text = _message_to_text(chunk.content)
@@ -133,9 +174,17 @@ def run_agent(user_input: str, history: list[dict[str, str]]) -> str:
 
     result = agent.invoke({"messages": messages})
     result_messages = result.get("messages", [])
+    logger.info(
+        "Agent invocation completed",
+        extra={"result_message_count": len(result_messages)},
+    )
     for message in reversed(result_messages):
         if isinstance(message, AIMessage):
             text = _message_to_text(message.content).strip()
             if text:
+                logger.debug(
+                    "Returning final AI response",
+                    extra={"text_preview": text[:500]},
+                )
                 return text
     raise ValueError("Agent returned no assistant response")
