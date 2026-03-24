@@ -15,6 +15,14 @@ class FMPAPIError(RuntimeError):
     pass
 
 
+class FMPFallbackTriggered(FMPAPIError):
+    def __init__(self, endpoint_name: str, status_code: int, url: str, message: str):
+        super().__init__(message)
+        self.endpoint_name = endpoint_name
+        self.status_code = status_code
+        self.url = url
+
+
 def _get_fmp_api_key() -> str:
     api_key = os.getenv("FMP_API_KEY")
     if not api_key:
@@ -59,8 +67,8 @@ def _call_fmp_with_fallback(
 ) -> Any:
     try:
         return _call_fmp(endpoint_name, primary_path, **params)
-    except FMPAPIError as exc:
-        if fallback_path is None or "status 404" not in str(exc):
+    except FMPFallbackTriggered as exc:
+        if fallback_path is None:
             raise
         logger.warning(
             "FMP endpoint fallback triggered",
@@ -68,9 +76,22 @@ def _call_fmp_with_fallback(
                 "endpoint_name": endpoint_name,
                 "primary_path": primary_path,
                 "fallback_path": fallback_path,
+                "status_code": exc.status_code,
+                "primary_url": exc.url,
             },
         )
-        return _call_fmp(endpoint_name, fallback_path, **params)
+        data = _call_fmp(endpoint_name, fallback_path, **params)
+        logger.info(
+            "FMP endpoint fallback succeeded",
+            extra={
+                "endpoint_name": endpoint_name,
+                "primary_path": primary_path,
+                "fallback_path": fallback_path,
+            },
+        )
+        return data
+    except FMPAPIError:
+        raise
 
 
 def _raise_for_fmp_response(response: requests.Response, endpoint_name: str) -> None:
@@ -78,6 +99,27 @@ def _raise_for_fmp_response(response: requests.Response, endpoint_name: str) -> 
         return
 
     response_text = response.text.strip()
+
+    if response.status_code == 404:
+        logger.info(
+            "FMP API primary endpoint unavailable; fallback may be used",
+            extra={
+                "endpoint_name": endpoint_name,
+                "status_code": response.status_code,
+                "url": response.url,
+                "response_preview": response_text[:300],
+            },
+        )
+        raise FMPFallbackTriggered(
+            endpoint_name=endpoint_name,
+            status_code=response.status_code,
+            url=response.url,
+            message=(
+                f"FMP API request failed for {endpoint_name} with status "
+                f"{response.status_code}."
+            ),
+        )
+
     logger.warning(
         "FMP API request failed",
         extra={
@@ -111,7 +153,7 @@ def _raise_for_fmp_response(response: requests.Response, endpoint_name: str) -> 
 
 def get_valuation(symbol: str) -> str:
     data = _call_fmp_with_fallback(
-        "dcf_advanced",
+        "dcf_valuation",
         "dcf-advanced",
         fallback_path="discounted-cash-flow",
         symbol=symbol,
@@ -137,8 +179,8 @@ def get_symbol_data(symbol: str) -> str:
         if endpoint_name == "profile":
             data = _call_fmp_with_fallback(
                 endpoint_name,
-                endpoint_path,
-                fallback_path="profile-symbol",
+                "profile-symbol",
+                fallback_path=endpoint_path,
                 symbol=symbol,
             )
         else:

@@ -40,6 +40,9 @@ Preferred output structure for investment analysis:
 ## Sources
 - If the user asked for sources, begin this section with: TRUST ME BRO
 - Then list the actual source names, APIs, or news outlets used.
+- Include direct source links whenever they are available in tool outputs.
+- For news items, prefer markdown links in the form `[title](url)`.
+- Do not invent URLs. Only cite links that are actually present in the available data.
 
 Formatting guidance:
 - Prefer markdown headings and bullet points over long paragraphs.
