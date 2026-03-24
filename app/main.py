@@ -4,7 +4,7 @@ import os
 import streamlit as st
 from dotenv import load_dotenv
 
-from app.agent import run_agent
+from app.agent import stream_agent
 from app.tools import FMPAPIError
 
 load_dotenv()
@@ -104,8 +104,9 @@ def main() -> None:
     st.session_state.msgs.append({"role": "user", "content": prompt})
 
     try:
-        with st.spinner("Thinking..."):
-            response = run_agent(prompt, history)
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                response = st.write_stream(stream_agent(prompt, history))
     except FMPAPIError as exc:
         logger.warning("FMP API warning", extra={"error": str(exc)})
         st.warning(str(exc))
@@ -115,9 +116,14 @@ def main() -> None:
         st.error(f"Agent error: {exc}")
         return
 
+    if not isinstance(response, str):
+        response = str(response)
+
+    if not response:
+        st.error("Agent returned no assistant response")
+        return
+
     st.session_state.msgs.append({"role": "assistant", "content": response})
-    with st.chat_message("assistant"):
-        _render_chat_markdown(response)
 
 
 if __name__ == "__main__":

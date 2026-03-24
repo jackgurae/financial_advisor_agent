@@ -1,5 +1,6 @@
 import logging
 import os
+from collections.abc import Iterator
 from functools import lru_cache
 from typing import Any
 
@@ -44,12 +45,14 @@ def build_agent():
             temperature=0,
             api_key=os.getenv("OPENAI_API_KEY"),
             reasoning={"effort": reasoning_effort},
+            streaming=True,
         )
     else:
         model = ChatOpenAI(
             model=model_name,
             temperature=0,
             api_key=os.getenv("OPENAI_API_KEY"),
+            streaming=True,
         )
     tools = get_tools()
     try:
@@ -80,6 +83,43 @@ def _message_to_text(content: Any) -> str:
     return str(content)
 
 
+def _build_messages(
+    user_input: str, history: list[dict[str, str]]
+) -> list[HumanMessage | AIMessage]:
+    messages: list[HumanMessage | AIMessage] = []
+    for message in history:
+        role = message.get("role")
+        content = message.get("content", "")
+        if role == "user":
+            messages.append(HumanMessage(content=content))
+        elif role == "assistant":
+            messages.append(AIMessage(content=content))
+    messages.append(HumanMessage(content=user_input))
+    return messages
+
+
+def stream_agent(user_input: str, history: list[dict[str, str]]) -> Iterator[str]:
+    logger.info(
+        "Streaming agent",
+        extra={
+            "history_length": len(history),
+            "user_input_preview": user_input[:120],
+        },
+    )
+    agent = build_agent()
+    messages = _build_messages(user_input, history)
+
+    for chunk, metadata in agent.stream(
+        {"messages": messages},
+        stream_mode="messages",
+    ):
+        if metadata.get("langgraph_node") != "agent":
+            continue
+        text = _message_to_text(chunk.content)
+        if text:
+            yield text
+
+
 def run_agent(user_input: str, history: list[dict[str, str]]) -> str:
     logger.info(
         "Running agent",
@@ -89,15 +129,7 @@ def run_agent(user_input: str, history: list[dict[str, str]]) -> str:
         },
     )
     agent = build_agent()
-    messages = []
-    for message in history:
-        role = message.get("role")
-        content = message.get("content", "")
-        if role == "user":
-            messages.append(HumanMessage(content=content))
-        elif role == "assistant":
-            messages.append(AIMessage(content=content))
-    messages.append(HumanMessage(content=user_input))
+    messages = _build_messages(user_input, history)
 
     result = agent.invoke({"messages": messages})
     result_messages = result.get("messages", [])
