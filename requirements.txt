@@ -1,4 +1,3 @@
-openai==1.58.1
 streamlit
 requests
 pandas
@@ -7,3 +6,6 @@ yfinance
 gnews
 python-dotenv
 pymongo
+langgraph
+langchain-core
+langchain-openai

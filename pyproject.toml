@@ -1,0 +1,37 @@
+[project]
+name = "financial-advisor-agent"
+version = "0.1.0"
+description = "Financial advisor Streamlit app powered by a LangGraph ReAct agent"
+readme = "Readme.md"
+requires-python = ">=3.10"
+dependencies = [
+    "streamlit",
+    "requests",
+    "pandas",
+    "matplotlib",
+    "yfinance",
+    "gnews",
+    "python-dotenv",
+    "pymongo",
+    "langgraph",
+    "langchain-core",
+    "langchain-openai",
+]
+
+[project.scripts]
+start = "app.__main__:main"
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = [
+    "ruff",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]

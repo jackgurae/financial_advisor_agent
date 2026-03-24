@@ -2,7 +2,9 @@
 
 ## Introduction
 
-This is a stock expert agent that can help you to make decisions on stock trading. It has abilities to access the stock data, analyze the stock data, news, and provide recommendation. It is built on OpenAI Assistant API.
+This is a stock expert agent that can help you to make decisions on stock trading. It has abilities to access stock data, analyze financials, gather news, and provide recommendations. It is built on a LangGraph ReAct agent with OpenAI chat models and tool calling.
+
+The current app implementation uses a LangGraph ReAct agent with OpenAI chat models and tool calling for stock data, valuation, and news retrieval.
 
 ## Why need function calling?
 
@@ -36,23 +38,25 @@ Run is asynchrounous. So we need to wait for the run to complete before we can g
    ![OpenAI Interface](https://i.imgur.com/yzpMgUV.png)
 4. Fill in the details for the assistant. Name, prompt, function, code interpreter, and files.
    4.1 for Function calling, we need to specify schema. e.g.
-   ```json
-   {
-     "name": "get_news",
-     "description": "Get latest news on specified stock name or symbol. Return headline and links.",
-     "parameters": {
-       "type": "object",
-       "properties": {
-         "ticker": {
-           "type": "string",
-           "description": "Symbol of stock or company name. Used as a query for stock data API calling"
-         }
-       },
-       "required": ["ticker"]
-     }
-   }
-   ```
-5. to use the assistant, grab assistant id from the settings.
+
+```json
+{
+  "name": "get_news",
+  "description": "Get latest news on specified stock name or symbol. Return headline and links.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "ticker": {
+        "type": "string",
+        "description": "Symbol of stock or company name. Used as a query for stock data API calling"
+      }
+    },
+    "required": ["ticker"]
+  }
+}
+```
+
+1. to use the assistant, grab assistant id from the settings.
 
 ## FMP API
 
@@ -62,9 +66,20 @@ FMP API provides the stock data and news. [Docs](https://financialmodelingprep.c
 
 gnews API provides the news data. [Docs](https://gnews.io/docs/v4)
 
-# How to deploy app on streamlit
+## Local development with uv
 
-1. create repository on github with requirements.txt
+1. Install `uv`.
+2. Create a virtual environment:
+   `uv venv`
+3. Sync dependencies from `pyproject.toml`:
+   `uv sync`
+4. Copy `.env.example` to `.env` and fill in your API keys.
+5. Run the app:
+   `uv run streamlit run app.py`
+
+## How to deploy app on streamlit
+
+1. create repository on github with `pyproject.toml` (or keep `requirements.txt` for compatibility)
 2. go to [https://www.streamlit.io/](https://share.streamlit.io/)
 3. login and create New App
 4. connect to github
