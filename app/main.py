@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -13,9 +14,25 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 
-def _render_chat_markdown(content: str) -> None:
+_LATEX_BLOCK_PATTERN = re.compile(r"(\$\$.*?\$\$|\\\[.*?\\\])", re.DOTALL)
+
+
+def _render_chat_content(content: str) -> None:
     with st.container():
-        st.markdown(content)
+        parts = _LATEX_BLOCK_PATTERN.split(content)
+        for part in parts:
+            if not part:
+                continue
+            stripped = part.strip()
+            if not stripped:
+                continue
+            if stripped.startswith("$$") and stripped.endswith("$$"):
+                st.latex(stripped[2:-2].strip())
+                continue
+            if stripped.startswith("\\[") and stripped.endswith("\\]"):
+                st.latex(stripped[2:-2].strip())
+                continue
+            st.markdown(part)
 
 
 def _configure_logging() -> None:
@@ -72,12 +89,12 @@ def main() -> None:
         )
         st.info(
             "Responses are formatted as structured markdown sections for easier reading. "
-            "Open 'About this agent' in the sidebar to inspect the current prompt and tool setup."
+            "Open the 'About This Agent' subpage in the sidebar to inspect the current prompt and tool setup."
         )
 
     for message in st.session_state.msgs:
         with st.chat_message(message["role"]):
-            _render_chat_markdown(message["content"])
+            _render_chat_content(message["content"])
 
     if not api_key or not fmp_api_key:
         st.warning(
@@ -92,14 +109,19 @@ def main() -> None:
     logger.info("Received user prompt", extra={"prompt_preview": prompt[:120]})
 
     with st.chat_message("user"):
-        _render_chat_markdown(prompt)
+        _render_chat_content(prompt)
     history = st.session_state.msgs.copy()
     st.session_state.msgs.append({"role": "user", "content": prompt})
 
     try:
         with st.chat_message("assistant"):
+            response_placeholder = st.empty()
             with st.spinner("Thinking..."):
-                response = st.write_stream(stream_agent(prompt, history))
+                response_parts: list[str] = []
+                for chunk in stream_agent(prompt, history):
+                    response_parts.append(chunk)
+                    response_placeholder.markdown("".join(response_parts))
+                response = "".join(response_parts)
     except FMPAPIError as exc:
         logger.warning("FMP API warning", extra={"error": str(exc)})
         st.warning(str(exc))
@@ -112,9 +134,15 @@ def main() -> None:
     if not isinstance(response, str):
         response = str(response)
 
+    response = response.strip()
+
     if not response:
         st.error("Agent returned no assistant response")
         return
+
+    response_placeholder.empty()
+    with response_placeholder.container():
+        _render_chat_content(response)
 
     st.session_state.msgs.append({"role": "assistant", "content": response})
 

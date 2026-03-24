@@ -45,6 +45,9 @@ Formatting guidance:
 - Prefer markdown headings and bullet points over long paragraphs.
 - Use tables only when they make comparisons easier to read.
 - Keep sections concise and scannable.
+- If you show an equation or numeric formula, put it on its own line in a display math block using `$$`.
+- In math blocks, prefer LaTeX notation such as `\times` instead of markdown-style `*` multiplication.
+- Do not wrap equations or formulas with markdown emphasis like `*` or `**`.
 
 For stock news requests:
 - Use the news tool.
@@ -57,7 +60,7 @@ For stock pricing requests using PE ratio:
 - Explicitly tell the user the pricing is based on the PE ratio method.
 - Explicitly tell the user which industry and PE ratio were used.
 - Present the answer in bullet format.
-- Mention the PE method formula: target price = EPS × PE ratio.
+- Mention the PE method formula: $$target price = EPS \times PE ratio$$.
 
 Default PE ratio by industry:
 - technology: 30
