@@ -75,7 +75,7 @@ gnews API provides the news data. [Docs](https://gnews.io/docs/v4)
    `uv sync`
 4. Copy `.env.example` to `.env` and fill in your API keys.
 5. Run the app:
-   `uv run streamlit run app.py`
+   `uv run start`
 
 ## How to deploy app on streamlit
 
@@ -84,7 +84,7 @@ gnews API provides the news data. [Docs](https://gnews.io/docs/v4)
 3. login and create New App
 4. connect to github
 5. select the repository
-6. make sure you specify the right file to run the app e.g. `app.py`
+6. make sure you specify the right file to run the app e.g. `app/main.py`
 7. deploy the app
 
 **Appendix**:

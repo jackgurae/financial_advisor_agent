@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -8,25 +7,36 @@ from app.agent import run_agent
 
 load_dotenv()
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
-IMAGE_PATH = ROOT_DIR / "QR_phatra.jpg"
-
 
 def main() -> None:
     st.set_page_config(page_title="Financial Advisor App", page_icon=":speech_balloon:")
 
     if "msgs" not in st.session_state:
         st.session_state.msgs = []
+    if "authenticated" not in st.session_state:
+        st.session_state.authenticated = False
 
     st.sidebar.header("Configuration")
-    if IMAGE_PATH.exists():
-        st.sidebar.image(str(IMAGE_PATH), use_container_width=True)
 
     api_key = os.getenv("OPENAI_API_KEY")
     fmp_api_key = os.getenv("FMP_API_KEY")
+    app_password = os.getenv("APP_PASSWORD")
 
     st.title("Stock Expert")
     st.write("Ask questions about stock valuation, financials, and more!")
+
+    if app_password:
+        if not st.session_state.authenticated:
+            password_input = st.text_input(
+                "Enter application password", type="password"
+            )
+            if st.button("Unlock"):
+                if password_input == app_password:
+                    st.session_state.authenticated = True
+                    st.rerun()
+                else:
+                    st.error("Invalid password")
+            return
 
     if not st.session_state.msgs:
         st.markdown(
