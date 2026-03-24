@@ -1,3 +1,4 @@
+import logging
 import os
 from functools import lru_cache
 from typing import Any
@@ -7,6 +8,8 @@ from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 
 from app.tools import get_tools
+
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """You are a helpful financial advisor.
 
@@ -64,19 +67,37 @@ def _get_reasoning_effort() -> str | None:
     return None
 
 
+def _supports_reasoning_effort(model_name: str) -> bool:
+    """Check if the model supports the reasoning_effort parameter (o1-series models)."""
+    return model_name.startswith(("o1-", "o3-"))
+
+
 @lru_cache(maxsize=1)
 def build_agent():
-    model_kwargs: dict[str, Any] = {}
     reasoning_effort = _get_reasoning_effort()
-    if reasoning_effort:
-        model_kwargs["reasoning"] = {"effort": reasoning_effort}
+    model_name = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
-    model = ChatOpenAI(
-        model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-        temperature=0,
-        api_key=os.getenv("OPENAI_API_KEY"),
-        model_kwargs=model_kwargs,
+    logger.debug(
+        "Building agent",
+        extra={
+            "model_name": model_name,
+            "reasoning_effort": reasoning_effort or "default",
+        },
     )
+
+    if reasoning_effort:
+        model = ChatOpenAI(
+            model=model_name,
+            temperature=0,
+            api_key=os.getenv("OPENAI_API_KEY"),
+            reasoning={"effort": reasoning_effort},
+        )
+    else:
+        model = ChatOpenAI(
+            model=model_name,
+            temperature=0,
+            api_key=os.getenv("OPENAI_API_KEY"),
+        )
     tools = get_tools()
     try:
         return create_react_agent(model=model, tools=tools, prompt=SYSTEM_PROMPT)
@@ -107,6 +128,13 @@ def _message_to_text(content: Any) -> str:
 
 
 def run_agent(user_input: str, history: list[dict[str, str]]) -> str:
+    logger.info(
+        "Running agent",
+        extra={
+            "history_length": len(history),
+            "user_input_preview": user_input[:120],
+        },
+    )
     agent = build_agent()
     messages = []
     for message in history:

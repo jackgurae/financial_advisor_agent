@@ -1,14 +1,37 @@
+import logging
 import os
 
 import streamlit as st
 from dotenv import load_dotenv
 
 from app.agent import run_agent
+from app.tools import FMPAPIError
 
 load_dotenv()
 
 
+logger = logging.getLogger(__name__)
+
+
+def _configure_logging() -> None:
+    log_level = os.getenv("APP_LOG_LEVEL", "INFO").upper()
+    root_logger = logging.getLogger()
+    if not root_logger.handlers:
+        logging.basicConfig(
+            level=getattr(logging, log_level, logging.INFO),
+            format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+        )
+    else:
+        root_logger.setLevel(getattr(logging, log_level, logging.INFO))
+
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("openai").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+
+
 def main() -> None:
+    _configure_logging()
     st.set_page_config(page_title="Financial Advisor App", page_icon=":speech_balloon:")
 
     if "msgs" not in st.session_state:
@@ -59,6 +82,8 @@ def main() -> None:
     if not prompt:
         return
 
+    logger.info("Received user prompt", extra={"prompt_preview": prompt[:120]})
+
     with st.chat_message("user"):
         st.markdown(prompt)
     history = st.session_state.msgs.copy()
@@ -67,7 +92,12 @@ def main() -> None:
     try:
         with st.spinner("Thinking..."):
             response = run_agent(prompt, history)
+    except FMPAPIError as exc:
+        logger.warning("FMP API warning", extra={"error": str(exc)})
+        st.warning(str(exc))
+        return
     except Exception as exc:
+        logger.exception("Unhandled agent error")
         st.error(f"Agent error: {exc}")
         return
 
