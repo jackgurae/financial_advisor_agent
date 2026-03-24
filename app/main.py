@@ -44,13 +44,6 @@ def main() -> None:
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
 
-    st.sidebar.header("Configuration")
-    st.sidebar.page_link(
-        "pages/01_About_This_Agent.py",
-        label="About this agent",
-        icon="ℹ️",
-    )
-
     api_key = os.getenv("OPENAI_API_KEY")
     fmp_api_key = os.getenv("FMP_API_KEY")
     app_password = os.getenv("APP_PASSWORD")
